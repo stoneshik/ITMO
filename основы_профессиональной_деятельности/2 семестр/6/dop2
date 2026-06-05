@@ -1,0 +1,53 @@
+	ORG 0x020
+ARRAY: WORD 4 DUP (?) ; Массив содержащий символы которые нужно вывести на ВУ-7
+	ORG 0x030
+X: WORD 0x0 ; Переменная X
+FIRST_ADDR: WORD 0x020 ; Адрес первого элемента массива
+NUMBER_PAIR: WORD 4 ; Количество пар символов в массиве
+ADDR: WORD 0x0 ; Адрес текущей пары
+I: WORD 0x0 ; Счетчик
+CHAR: WORD 0x0 ; 
+
+	ORG 0x040
+START: CLA
+	DI
+MAIN: CALL SAVE_ARRAY
+	CALL INT1
+	HLT
+	JUMP MAIN
+
+OUTPUT: OUT 16 ; Проверка готово ли ВУ-7 для вывода
+	BEQ OUTPUT ; Спин-луп если ввод не готов
+	LD &1
+	OUT 0x14 ; Вывод символа на ВУ-7
+	RET
+
+SAVE_ARRAY:
+	LD X
+	AND #0F
+	CMP #0A
+	BLT SAVE ; меньше A
+
+SAVE: 	
+	RET
+
+INT1: ; Считывает содержимое массива и выводит его на ВУ-7
+	PUSH
+	LD FIRST_ADDR
+	ST ADDR
+	LD NUMBER_PAIR
+	ST I
+LOOP1: LD (ADDR) ; Начало цикла ввода
+	PUSH
+	CALL OUTPUT
+	POP
+	SWAB
+	PUSH
+	CALL OUTPUT
+	POP
+	CLA ; Обнуляем прочитанное значение
+	ST (ADDR)+
+	LOOP I ; Проверка конца цикла
+	JUMP LOOP1
+	POP
+	RET

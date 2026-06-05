@@ -1,0 +1,70 @@
+	ORG 0x0 ; Инициализация векторов прерывания
+V0: WORD $DEFAULT, 0x180 ; Вектор прерывания #0
+V1: WORD $DEFAULT, 0x180 ; Вектор прерывания #1
+V2: WORD $INT2, 0x180 ; Вектор прерывания #2
+V3: WORD $INT3, 0x180 ; Вектор прерывания #3
+V4: WORD $DEFAULT, 0x180 ; Вектор прерывания #4
+V5: WORD $DEFAULT, 0x180 ; Вектор прерывания #5
+V6: WORD $DEFAULT, 0x180 ; Вектор прерывания #6
+V7: WORD $DEFAULT, 0x180 ; Вектор прерывания #7
+	ORG 0x035
+X: WORD 0x0 ; Переменная X
+MIN: WORD 0xFFEC ; Наименьшее значение
+MAX: WORD 0x0014 ; Наибольшее значение
+DEFAULT: IRET ; Обработка прерывания по умолчанию
+
+START: DI
+	CLA
+	OUT 0x1 ; Перечисление неиспользуемых ВУ
+	OUT 0x3
+	OUT 0xB
+	OUT 0x11
+	OUT 0x15
+	OUT 0x19
+	OUT 0x1D
+	LD #0xA ; загрузка в аккумулятор MR (1000|0010=1010)
+	OUT 5 ; разрешение прерываний для 2 ВУ
+	LD #0xB ; загрузка в аккумулятор MR (1000|0011=1011)
+	OUT 7 ; разрешение прерываний для 3 ВУ
+	EI
+
+PROG:
+	DI
+	LD X
+	INC
+	CALL CHECK
+	ST X
+	EI
+	JUMP PROG
+
+INT2: ; обработка прерывания на ВУ-2
+	DI
+	NOP
+	IN 4
+	AND #0x000F
+	AND X
+	ST X
+	NOP
+	EI
+	IRET
+
+INT3: ; обработка прерывания на ВУ-3
+	DI
+	LD X
+	ASL
+	ADD X
+	ASL
+	ADD #0x6
+	OUT 6
+	NOP
+	EI
+	IRET
+
+CHECK: ; Проверка принадлежности X к ОДЗ
+	CMP MIN ; Если X < MIN то сбрасываем X в минимальное значение
+	BLT LD_MIN
+	CMP MAX ; Если X <= MAX то выходим из проверки
+	BLT RETURN
+	BEQ RETURN
+LD_MIN: LD MIN
+RETURN: RET ; Выход из проверки

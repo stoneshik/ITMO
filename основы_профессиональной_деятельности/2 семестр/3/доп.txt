@@ -1,0 +1,26 @@
+ORG 0x020
+ADDR: WORD $ARR ; Адрес первого элемента массива
+I: WORD 0 ; Адрес текущего элемента
+N: WORD 4 ; Количество элементов массива
+RES_LOW_WORD: WORD 0 ; Младшее слово результата
+RES_HIGH_WORD: WORD 0 ; Старшее слово результата
+START: CLA
+LD ADDR
+ST I
+START_LOOP: LD (I) ; Начало цикла
+ADD RES_LOW_WORD
+ST RES_LOW_WORD
+LD (I) ; Начало обработки старшего слова
+BPL POSITIVE
+LD #0xFF
+JUMP SUM_HIGH_WORD
+POSITIVE: CLA
+BCC END_LOOP
+SUM_HIGH_WORD: ADC RES_HIGH_WORD
+ST RES_HIGH_WORD
+END_LOOP: LD (I)+
+LOOP N ; Конец цикла
+JUMP START_LOOP
+HLT
+ORG 0x040
+ARR: WORD 15000, 30000, 30000, 5

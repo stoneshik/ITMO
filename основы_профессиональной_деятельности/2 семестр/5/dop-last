@@ -1,0 +1,82 @@
+	ORG 0x020
+ARRAY_OUT: WORD 4 DUP (?) ; Массив содержащий символы которые нужно вывести на ВУ-7
+	ORG 0x025
+ARRAY_DEC: WORD 0x2710, 0x3E8, 0x64, 0xA ; Вспомогательный массив для перевода в двоично-десятичную СС
+	ORG 0x030
+X: WORD 0x0 ; Переменная X
+FIRST_ADDR_OUT: WORD 0x020 ; Адрес первого элемента массива для вывода
+FIRST_ADDR_DEC: WORD 0x025 ; Адрес первого элемента вспомогательного массива перевода
+LENGTH_OUT: WORD 0x4 ; Длина массива вывода
+LENGTH_DEC: WORD 0x4 ; Длина вспомогательного массива перевода в дес. СС
+ADDR_OUT: WORD 0x0 ; Адрес текущего элемента массива вывода
+ADDR_DEC: WORD 0x0 ; Адрес текущего элемента вспомогательного массива
+I: WORD 0x0 ; Счетчик для основного цикла
+J: WORD 0x0 ; Счетчик для вложенного цикла
+
+	ORG 0x040
+START: CLA
+	DI
+MAIN: CALL CONVERT_TO_DEC
+	CALL OUT_ARRAY
+	HLT
+
+CONVERT_TO_DEC: ; Перевод в двоично-десятичную с сохранением в массив для вывода
+	LD FIRST_ADDR_DEC
+	ST ADDR_DEC
+	LD LENGTH_DEC ; Задаем значение для декрементного счетчика
+	ROR ; Определяем четность
+	BLO SAVE_I ; Если четный то переходим к сохранению значения
+	INC
+SAVE_I: ST I
+	ADD FIRST_ADDR_OUT ; Задаем значение адресу в который будет производится запись
+	ST ADDR_OUT
+	LD X ; Изменяемая копия X будет хранится в вершине стека
+	PUSH
+FIRST_LOOP: 
+	CLA ; Обнуляем значение вложенного счетчика
+	ST J ; Он является значением цифры
+	SECOND_LOOP: LD &1 ; Цикл расчета значения десятичной цифры
+		SUB (ADDR_DEC)
+		BMI BREAK_SECOND ; Получен отрицательный рез. выходим из цикла
+		ST &1
+		LD (J)+ ; Увеличиваем значение цифры
+		JUMP SECOND_LOOP
+	BREAK_SECOND: 
+	LD LENGTH_DEC ; Проверка на четность номера цикла
+	SUB I
+	ROR
+	BLO EVEN ; Если четный то сохраняем сразу результат
+	LD (ADDR_OUT)
+	SWAB
+	ADD J
+	ST (ADDR_OUT)
+	JUMP END_LOOP
+EVEN: LD J
+	ST -(ADDR_OUT) ; Сохраняем результат
+END_LOOP: LOOP I ; Конец цикла
+	JUMP FIRST_LOOP
+	POP
+	RET
+
+OUT_ARRAY: ; Считывает содержимое массива вывода и выводит его на ВУ-7
+	LD FIRST_ADDR_OUT ; Задаем начальный адрес
+	ST ADDR_OUT
+	LD LENGTH_OUT ; Задаем значение декрементного счетчика
+	ST I
+LOOP_OUT: LD (ADDR_OUT)+ ; Начало цикла вывода
+	PUSH
+	CALL OUTPUT
+	POP
+	SWAB
+	PUSH
+	CALL OUTPUT
+	LOOP I ; Проверка конца цикла
+	JUMP LOOP_OUT
+	POP
+	RET
+
+OUTPUT: IN 16 ; Проверка готово ли ВУ-7 для вывода
+	BEQ OUTPUT ; Спин-луп если ввод не готов
+	LD &1
+	OUT 0x14 ; Вывод символа на ВУ-7
+	RET

@@ -1,0 +1,23 @@
+ORG 0x12F
+START: CLA
+LD FIRST_ADDR_PAIR
+ST ADDR_PAIR
+PAIR: CALL INPUT ; Начало цикла ввода пары символов (ввод 1-го символа)
+CMP #0x0D
+SWAB
+ST (ADDR_PAIR)
+BEQ STOP ; Завершаем если стоп символ
+CALL INPUT ; Ввод 2-го символа
+ADD (ADDR_PAIR)
+ST (ADDR_PAIR)+
+CMP #0x0D
+BNE PAIR ; Продолжаем если не равно стоп символу
+STOP: HLT
+FIRST_ADDR_PAIR: WORD 0x56D ; Адрес для сохранения первой пары символов
+ADDR_PAIR: WORD ? ; Адрес текущей пары символов
+ORG 0x100 ; Подпрограмма для ввода
+INPUT: IN 7 ; Ожидание ввода
+AND #0x40
+BEQ INPUT ; Спин-луп если ввод не готов
+IN 6 ; Ввод символа в аккумулятор
+RET

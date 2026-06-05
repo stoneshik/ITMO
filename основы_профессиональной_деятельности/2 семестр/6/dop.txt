@@ -1,0 +1,67 @@
+	ORG 0x0 ; Инициализация векторов прерывания
+V0: WORD $DEFAULT, 0x180 ; Вектор прерывания #0
+V1: WORD $INT1, 0x180 ; Вектор прерывания #1
+V2: WORD $DEFAULT, 0x180 ; Вектор прерывания #2
+V3: WORD $DEFAULT, 0x180 ; Вектор прерывания #3
+V4: WORD $DEFAULT, 0x180 ; Вектор прерывания #4
+V5: WORD $DEFAULT, 0x180 ; Вектор прерывания #5
+V6: WORD $DEFAULT, 0x180 ; Вектор прерывания #6
+V7: WORD $DEFAULT, 0x180 ; Вектор прерывания #7
+	ORG 0x020
+ARRAY: WORD 4 DUP (?) ; Массив содержащий символы которые нужно вывести на ВУ-7
+	ORG 0x030
+X: WORD 0x0 ; Переменная X
+FIRST_ADDR: WORD 0x020 ; Адрес первого элемента массива
+NUMBER_PAIR: WORD 4 ; Количество пар символов в массиве
+ADDR: WORD 0x0 ; Адрес текущей пары
+I: WORD 0x0 ; Счетчик
+
+DEFAULT: IRET ; Обработка прерывания по умолчанию
+START: DI
+	CLA
+	OUT 0x1 ; Перечисление неиспользуемых ВУ
+	OUT 0x3
+	OUT 0x5
+	OUT 0x7
+	OUT 0xB
+	OUT 0xF
+	OUT 0x13
+	OUT 0x1B
+	OUT 0x1F
+	LD #0x9
+	OUT 0x17 ; разрешение прерываний для 7 ВУ на 1 вектор
+
+PROG:
+	CALL SAVE_ARRAY
+	EI
+	NOP
+	JUMP PROG
+
+SAVE_ARRAY:
+	LD #0x01
+	SWAB
+	ADD #0x12
+	ST 0x020
+	LD #1
+	ST NUMBER_PAIR
+	RET
+
+INT1: ; Считывает содержимое массива и выводит его на ВУ-7
+	PUSH
+	LD FIRST_ADDR
+	ST ADDR
+	LD NUMBER_PAIR
+	ST I
+
+LOOP1: LD (ADDR) ; Начало цикла ввода
+	AND #0x40
+	OUT 0x14
+	SWAB
+	OUT 0x14
+	CLA ; Обнуляем прочитанное значение
+	ST (ADDR)+
+	LOOP I ; Проверка конца цикла
+	JUMP LOOP1
+	POP
+	EI
+	IRET

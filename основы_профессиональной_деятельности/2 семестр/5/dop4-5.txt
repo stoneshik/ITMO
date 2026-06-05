@@ -1,0 +1,77 @@
+ORG 0x100
+START: CLA
+LD FIRST_ADDR_PAIR
+ST ADDR_PAIR
+PAIR: CALL INPUT ; Начало цикла ввода пары символов (ввод 1-го символа)
+CALL PART_HANDLER ; Обработка части слова
+LD BYTE_SYMBOL ; Загрузка байта символа
+BEQ STOP1 ; Остановка если стоп символ
+SWAB
+ST (ADDR_PAIR)
+LD -(NUMBER_BYTES) ; Уменьшаем счетчик байтов
+LD RES
+BMI STOP ; Завершение работы, если было вызвано исключение
+CALL INPUT ; Ввод 2-го символа
+CALL PART_HANDLER ; Обработка части слова
+LD BYTE_SYMBOL ; Загрузка байта символа
+BEQ STOP2 ; Остановка если стоп символ
+ADD (ADDR_PAIR)
+ST (ADDR_PAIR)+
+LD -(NUMBER_BYTES) ; Уменьшаем счетчик байтов
+LD RES
+BMI STOP ; Завершение работы, если было вызвано исключение
+JUMP PAIR ; Переход в начало цикла
+HLT
+STOP1: SWAB
+JUMP STOP
+STOP2: ADD (ADDR_PAIR)
+STOP: ST (ADDR_PAIR)
+HLT
+
+FIRST_ADDR_PAIR: WORD 0x200 ; Адрес для сохранения первой пары символов
+ADDR_PAIR: WORD ? ; Адрес текущей пары символов
+RES: WORD 0
+NUMBER_BYTES: WORD 0 ; Количество байтов для символа
+BYTE_SYMBOL: WORD 0 ; Введеный байт текущего символа
+
+ORG 0x150 ; Подпрограмма для ввода
+INPUT: IN 7 ; Ожидание ввода
+AND #0x40
+BEQ INPUT ; Спин-луп если ввод не готов
+IN 6 ; Ввод символа в аккумулятор
+ST BYTE_SYMBOL
+RET
+
+ORG 0x160 ; Подпрограмма для определения нужного для символа количества байт
+FIND_NUMBER_BYTES: SXTB
+BMI SECOND ; Переход если символ не помещается в байт
+LD #1
+JUMP LAST
+SECOND: CMP #0xD0 ; Проверка нужно ли 2 байта
+BNE THIRD
+LD #2
+JUMP LAST
+THIRD: CMP #0xE8 ; Проверка нужно ли 3 байта
+BNE FOURTH
+LD #3
+JUMP LAST
+FOURTH: LD #4 ; Все варианты неверны, значит 4 байта
+LAST: ST NUMBER_BYTES ; Сохраняем необходимое количество байтов
+RET
+
+ORG 0x180 ; Подпрограмма обработки части символа
+PART_HANDLER: LD NUMBER_BYTES
+BNE PART ; Переход если это не первый байт символа
+LD (RES)+ ; Увеличиваем счетчик результата
+LD BYTE_SYMBOL
+BEQ STOP_PART ; Остановка если стоп символ
+CALL FIND_NUMBER_BYTES
+JUMP STOP_PART
+PART: LD BYTE_SYMBOL
+SXTB
+AND #0xC0
+CMP #0x80
+BEQ STOP_PART ; Если 2 старших байта равны 10, то завершаем подпрограмму, иначе завершаем всю программу, из-за исключения
+LD #-1
+ST RES
+STOP_PART: RET
